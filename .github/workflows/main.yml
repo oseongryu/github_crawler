@@ -1,6 +1,10 @@
-name: helloGithubAction
+name: cron
 
-on: [push]
+# on:
+#   push:
+#     branches: [ main ]
+#   schedule:
+#     - cron: '0 7 * * *'
 
 jobs:
   build:
@@ -10,20 +14,35 @@ jobs:
       with:
         # 개인 토큰을 사용할 것인지 말 것인지
         persist-credentials: false
-    - name: pip upgrade
-      run: python -m pip install --upgrade pip
-    - name: pip install
-      run: pip install -r requirements.txt
-    - name: python execute
-      run: python test.py
-    - name: commit changes
+
+    - name: git config
       run: |
         git config --local user.email "admin"
         git config --local user.name "admin"
+        git remote set-url origin https://x-access-token:${{ secrets.MY_SECRET_TOKEN }}@github.com/oseongryu/github_crawler.git
+
+    - name: git checkout crawling
+      run: |
+        git fetch origin crawling || git checkout -b crawling
+        git checkout crawling
+        git pull origin crawling || echo "No changes to pull"
+
+    - name: pip upgrade
+      run: python -m pip install --upgrade pip
+
+    - name: pip install
+      run: pip install -r requirements.txt
+
+    - name: python execute
+      run: python youtube_shorts.py
+      env:
+        YOUTUBE_KEY: ${{ secrets.YOUTUBE_KEY }}
+
+    - name: commit changes
+      run: |
         git add .
-        git commit -m "test"
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        branch: "main"
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        git commit -m "test" || echo "No changes to commit"
+
+    - name: push changes
+      run: |
+        git push origin crawling
